@@ -1,16 +1,22 @@
 package com.magicauction.offermanager.proccesor;
 
+import com.magicauction.offermanager.controller.OfferController;
 import com.magicauction.offermanager.entity.Offer;
 import com.magicauction.offermanager.entity.Publication;
+import com.magicauction.offermanager.entity.TradeStatus;
 import com.magicauction.offermanager.entity.User;
 import com.magicauction.offermanager.entity.dtos.OfferDto;
 import com.magicauction.offermanager.entity.exceptions.UserNotFoundException;
 import com.magicauction.offermanager.entity.repository.OfferRepository;
 import com.magicauction.offermanager.entity.repository.PublicationRepository;
 import com.magicauction.offermanager.entity.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.sql.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,6 +24,7 @@ import java.util.stream.Collectors;
 @Service
 public class OfferProcessor implements IOfferProcessor{
 
+    private static final Logger log = LoggerFactory.getLogger(OfferController.class);
     private final OfferRepository repository;
     private final UserRepository userRepository;
     private final PublicationRepository publicationRepository;
@@ -41,51 +48,87 @@ public class OfferProcessor implements IOfferProcessor{
 
     @Override
     public Optional<OfferDto> createNewOffer(OfferDto inputOffer) throws UserNotFoundException {
-        if(isBuyerEqualFromSeller(inputOffer) || isPublicationsEmpty(inputOffer))
+        if(validateInputOffer(inputOffer)){
+            log.info("inputOffer not valid: {}", inputOffer);
             return Optional.empty();
-
-        //TODO: check that pub is of correct publisher
-        Offer toSave = toEntity(inputOffer);
-        Offer offer = repository.save(toSave);
-        return Optional.of(fromEntity(offer));
+        }
+        return Optional.of(fromEntity(repository.save(toEntity(inputOffer))));
     }
 
-
     @Override
-    public Optional<OfferDto> updateOffer(Long offerId, OfferDto inputOffer) {
-        if(isBuyerEqualFromSeller(inputOffer) || isPublicationsEmpty(inputOffer))
+    public Optional<OfferDto> updateOffer(Long offerId, OfferDto inputOffer) throws UserNotFoundException {
+        if(validateInputOffer(inputOffer)){
+            log.info("inputOffer not valid: {}", inputOffer);
             return Optional.empty();
-
-        return null;
+        }
+        Optional<Offer> OptOffer = repository.findById(offerId);
+        if ((OptOffer.isEmpty())) {
+            log.info("Old Offer not found: {} - Creating new Offer!", offerId);
+            return this.createNewOffer(inputOffer);
+        }
+        Offer offer = OptOffer.get();
+        List<Publication> pubs = publicationRepository.findAllById(inputOffer.publications());
+        offer.setPublications(new HashSet<>(pubs));
+        offer.setStatus(inputOffer.status() != null ? inputOffer.status() : TradeStatus.IN_PROGRESS);
+        repository.save(offer);
+        return Optional.of(fromEntity(offer));
     }
 
     @Override
     public Boolean deleteOfferById(Long offerId) {
-        return null;
+        Optional<Offer> optOffer = repository.findById(offerId);
+        if (optOffer.isPresent()) {
+            repository.delete(optOffer.get());
+            return true;
+        }
+        return false;
     }
 
     @Override
     public List<OfferDto> findOffersByPublisher(Long publisherId) {
-        return null;
+        return repository.findOfferByPublisher(publisherId)
+                .stream()
+                .map(this::fromEntity)
+                .collect(Collectors.toList())
+                ;
     }
 
     @Override
-    public Optional<OfferDto> findOfferByIdAndByPublisher(Long offerId, Long publisherId) {
+    public List<OfferDto> findOffersByBuyer(Long buyerId) {
+        //TODO: ON DEMO DAY
         return null;
     }
 
     @Override
     public List<OfferDto> findOfferByPublisherIdAndByBuyerId(Long publisherId, Long buyerId) {
-        return null;
+        return repository.findOfferByPublisherAndBuyer(publisherId, buyerId)
+                .stream()
+                .map(this::fromEntity)
+                .collect(Collectors.toList())
+                ;
     }
 
     @Override
     public List<OfferDto> updateOffersToFinished(List<Long> idsToUpdate) {
-        return null;
+        return repository.findAllById(idsToUpdate)
+                .stream()
+                .map(this::updateToFinish)
+                .map(repository::save)
+                .map(this::fromEntity)
+                .collect(Collectors.toList())
+                ;
+    }
+
+    private Offer updateToFinish(Offer o) {
+        o.setFinishedAt(new Date(new java.util.Date().getTime()));
+        o.setStatus(TradeStatus.FINISHED);
+        return o;
     }
 
     public OfferDto fromEntity(Offer entity){
-        List<Long> pubIds = entity.getPublications().stream().map(Publication::getPublicationId).collect(Collectors.toList());
+        List<Long> pubIds = entity.getPublications().stream()
+                .map(Publication::getPublicationId)
+                .collect(Collectors.toList());
         return new OfferDto(entity.getOfferId(),
                 entity.getPublisher().getUserId(),
                 entity.getBuyer().getUserId(),
@@ -96,7 +139,7 @@ public class OfferProcessor implements IOfferProcessor{
         );
     }
 
-    private boolean isBuyerEqualFromSeller(OfferDto inputOffer) {
+    private boolean AreBuyerAndPublisherEquals(OfferDto inputOffer) {
         return inputOffer.buyerId().equals(inputOffer.publisherId());
     }
 
@@ -104,11 +147,27 @@ public class OfferProcessor implements IOfferProcessor{
         User buyer = userRepository.findById(inputOffer.buyerId()).orElseThrow(UserNotFoundException::new);
         User publisher = userRepository.findById(inputOffer.publisherId()).orElseThrow(UserNotFoundException::new);
         List<Publication> pubs = publicationRepository.findAllById(inputOffer.publications());
-        return new Offer(publisher, buyer, pubs);
+        return new Offer(publisher, buyer, new HashSet<>(pubs));
     }
 
     private boolean isPublicationsEmpty(OfferDto inputOffer) {
         return inputOffer.publications().isEmpty();
     }
 
+
+    private boolean isPubOfCorrectPublisher(OfferDto inputOffer) {
+        return inputOffer.publications().stream()
+                .map(publicationRepository::findById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .noneMatch(p -> p.getPublisher().getUserId().equals(inputOffer.publisherId()))
+                ;
+    }
+
+
+    private boolean validateInputOffer(OfferDto inputOffer){
+        return  AreBuyerAndPublisherEquals(inputOffer)
+                || isPublicationsEmpty(inputOffer)
+                || isPubOfCorrectPublisher(inputOffer);
+    }
 }

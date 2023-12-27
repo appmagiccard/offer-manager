@@ -5,7 +5,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -24,11 +23,7 @@ public class Publication {
     @JoinColumn(name="publisher_id", referencedColumnName = "userId")
     private User publisher;
 
-    @ManyToMany
-    @JoinTable(
-            name = "publication_offer",
-            joinColumns = @JoinColumn(name = "publication_id"),
-            inverseJoinColumns = @JoinColumn(name = "offer_id"))
+    @ManyToMany()
     private Set<Offer> offers;
 
     private String cardName;
@@ -39,7 +34,7 @@ public class Publication {
         return "Publication{" +
                 "publicationId=" + publicationId +
                 ", publisher=" + publisher +
-                ", offer=" + offers +
+                ", offers=" + offers +
                 ", cardName='" + cardName + '\'' +
                 '}';
     }
@@ -65,10 +60,10 @@ public class Publication {
         this.cardName = cardName;
     }
 
-    public Publication(Long publicationId, User publisher, Set<Offer> offer, String cardName) {
+    public Publication(Long publicationId, User publisher, Set<Offer> offers, String cardName) {
         this.publicationId = publicationId;
         this.publisher = publisher;
-        this.offers = offer;
+        this.offers = offers;
         this.cardName = cardName;
     }
 
@@ -88,18 +83,18 @@ public class Publication {
         this.publisher = publisher;
     }
 
-    public Set<Offer> getOffers() {
+    public Set<Offer> getPubOffers() {
         return offers;
     }
 
-    public void setOffers(Set<Offer> offers) {
-        this.offers = offers;
+    public void setPubOffers(Set<Offer> pubOffers) {
+        this.offers = pubOffers;
     }
 
-    public Publication(Long publicationId, User publisher, Set<Offer> offer) {
+    public Publication(Long publicationId, User publisher, Set<Offer> offers) {
         this.publicationId = publicationId;
         this.publisher = publisher;
-        this.offers = offer;
+        this.offers = offers;
     }
 
 

@@ -13,13 +13,13 @@ public interface IOfferProcessor {
 
     Optional<OfferDto> createNewOffer(OfferDto inputOffer) throws UserNotFoundException;
 
-    Optional<OfferDto> updateOffer(Long offerId, OfferDto inputOffer);
+    Optional<OfferDto> updateOffer(Long offerId, OfferDto inputOffer) throws UserNotFoundException;
 
     Boolean deleteOfferById(Long offerId);
 
     List<OfferDto> findOffersByPublisher(Long publisherId);
 
-    Optional<OfferDto> findOfferByIdAndByPublisher(Long offerId, Long publisherId);
+    List<OfferDto> findOffersByBuyer(Long buyerId);
 
     List<OfferDto> findOfferByPublisherIdAndByBuyerId(Long publisherId, Long buyerId);
 

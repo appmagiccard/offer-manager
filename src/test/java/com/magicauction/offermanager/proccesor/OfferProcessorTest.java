@@ -19,9 +19,11 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -98,7 +100,7 @@ class OfferProcessorTest {
         long user2 = 2L;
         when(userRepository.findById(user1)).thenReturn(Optional.of(user(user1)));
         when(userRepository.findById(user2)).thenReturn(Optional.of(user(user2)));
-        when(publicationRepository.findAllById(anyList())).thenReturn(publications());
+        when(publicationRepository.findById(anyLong())).thenReturn(Optional.of(new Publication(1L, user(1L), new HashSet<>(), "C4RD")));
         when(offerRepository.save(any())).thenReturn(offer());
         Optional<OfferDto> newOffer = offerProcessor.createNewOffer(inputOffer());
         assertNotNull(newOffer);
@@ -110,8 +112,9 @@ class OfferProcessorTest {
         assertTrue(newOffer.isEmpty());
     }
     @Test void createNewOffer_whenUserNotFound() throws UserNotFoundException {
-        when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
-        assertThrows(UserNotFoundException.class, () -> offerProcessor.createNewOffer(inputOffer()));
+        Optional<OfferDto> newOffer = offerProcessor.createNewOffer(inputOffer());
+        assertNotNull(newOffer);
+        assertTrue(newOffer.isEmpty());
     }
     @Test void createNewOffer_whenUserPublicationsListIsEmpty() throws UserNotFoundException {
         Optional<OfferDto> newOffer = offerProcessor.createNewOffer(inputOfferWithEmptyList());
@@ -119,39 +122,111 @@ class OfferProcessorTest {
         assertTrue(newOffer.isEmpty());
     }
 
-    private OfferDto inputOfferWithEmptyList() {
-        return new OfferDto(
-                1L,
-                2L,
-                Collections.EMPTY_LIST
-        );
-    }
-
-    @Test void updateOffer_whenIsOk(){
-        long user1 = 1L;
-        long user2 = 2L;
+    @Test void updateOffer_whenIsOk() throws UserNotFoundException {
         long offerId = 34L;
-        when(userRepository.findById(user1)).thenReturn(Optional.of(user(user1)));
-        when(userRepository.findById(user2)).thenReturn(Optional.of(user(user2)));
-        //TODO:REVISAR when(publicationRepository.findAllById(anyList())).thenReturn(publications());
-        when(offerRepository.save(any())).thenReturn(offer());
+        when(publicationRepository.findById(anyLong())).thenReturn(Optional.of(new Publication(1L, user(1L), new HashSet<>(), "C4RD")));
+        when(publicationRepository.findAllById(anyList())).thenReturn(Arrays.asList(new Publication(1L, user(1L), new HashSet<>(), "C4RD"), new Publication(2L, user(1L), new HashSet<>(), "C4RD")));
+        when(offerRepository.findById(offerId)).thenReturn(Optional.of(offer(offerId)));
         Optional<OfferDto> newOffer = offerProcessor.updateOffer(offerId,inputOfferWithUpdate());
         assertNotNull(newOffer);
         assertTrue(newOffer.isPresent());
+        assertEquals(2, newOffer.get().publications().size());
+        assertNotNull(newOffer.get().status());
     }
 
-    private OfferDto inputOfferWithUpdate() {
-        return new OfferDto(
-                1L,
-                2L,
-                Arrays.asList(1L, 2L)
-        );
+
+    @Test void updateOffer_whenValidationError() throws UserNotFoundException {
+        long offerId = 34L;
+        Optional<OfferDto> newOffer = offerProcessor.updateOffer(offerId, inputOfferWithUserError());
+        assertNotNull(newOffer);
+        assertTrue(newOffer.isEmpty());
+    }
+    @Test void updateOffer_whenOfferNotFound() throws UserNotFoundException {
+        long offerId = 35L;
+        long user1 = 1L;
+        long user2 = 2L;
+        when(userRepository.findById(user1)).thenReturn(Optional.of(user(user1)));
+        when(userRepository.findById(user2)).thenReturn(Optional.of(user(user2)));
+        when(publicationRepository.findById(anyLong())).thenReturn(Optional.of(new Publication(1L, user(1L), new HashSet<>(), "C4RD")));
+        when(offerRepository.save(any())).thenReturn(offer());
+        Optional<OfferDto> newOffer = offerProcessor. updateOffer(offerId, inputOffer());
+        assertNotNull(newOffer);
+        assertTrue(newOffer.isPresent());
+    }
+    @Test void updateOffer_whenUserNotFound() throws UserNotFoundException {
+        long offerId = 35L;
+        Optional<OfferDto> newOffer = offerProcessor. updateOffer(offerId, inputOffer());
+        assertNotNull(newOffer);
+        assertTrue(newOffer.isEmpty());
     }
 
-    @Test void updateOffer_whenValidationError(){}
-    @Test void updateOffer_whenOfferNotFound(){}
-    @Test void updateOffer_whenUserNotFound(){}
+    @Test void deleteOffer_whenIsOk(){
+        long offerId = 35L;
+        when(offerRepository.findById(offerId)).thenReturn(Optional.of(offer(offerId)));
+        Boolean res = offerProcessor.deleteOfferById(offerId);
+        assertTrue(res);
+    }
+    @Test void deleteOffer_whenOfferNotFound(){
+        long offerId = 35L;
+        when(offerRepository.findById(offerId)).thenReturn(Optional.empty());
+        Boolean res = offerProcessor.deleteOfferById(offerId);
+        assertFalse(res);
+    }
 
+    @Test void findOffersByPublisher_whenIsOk(){
+        long publisherId = 1L;
+        when(offerRepository.findOfferByPublisher(publisherId)).thenReturn(Arrays.asList(offer(1L), offer(2L)));
+        List<OfferDto> res = offerProcessor.findOffersByPublisher(publisherId);
+        assertNotNull(res);
+        assertFalse(res.isEmpty());
+    }
+
+    @Test void findOffersByPublisher_whenIsEmpty(){
+        long publisherId = 1L;
+        when(offerRepository.findOfferByPublisher(publisherId)).thenReturn(Collections.emptyList());
+        List<OfferDto> res = offerProcessor.findOffersByPublisher(publisherId);
+        assertNotNull(res);
+        assertTrue(res.isEmpty());
+    }
+
+    @Test void findOffersByPublisherAndBuyer_whenIsOk(){
+        long publisherId = 1L;
+        long buyerId = 2L;
+        when(offerRepository.findOfferByPublisherAndBuyer(publisherId, buyerId)).thenReturn(Arrays.asList(offer(1L), offer(2L)));
+        List<OfferDto> res = offerProcessor.findOfferByPublisherIdAndByBuyerId(publisherId, buyerId);
+        assertNotNull(res);
+        assertFalse(res.isEmpty());
+    }
+
+    @Test void findOffersByPublisherAndBuyer_whenIsEmpty(){
+        long publisherId = 1L;
+        long buyerId = 2L;
+        when(offerRepository.findOfferByPublisherAndBuyer(publisherId, buyerId)).thenReturn(Collections.emptyList());
+        List<OfferDto> res = offerProcessor.findOfferByPublisherIdAndByBuyerId(publisherId, buyerId);
+        assertNotNull(res);
+        assertTrue(res.isEmpty());
+    }
+
+    @Test void updateToFinished_whenIsOk(){
+        List<Long> ids = Arrays.asList(1L, 2L);
+        when(offerRepository.findAllById(anyList())).thenReturn(Arrays.asList(offer(1L), offer(2L)));
+        List<OfferDto> res = offerProcessor.updateOffersToFinished(ids);
+        assertNotNull(res);
+        assertFalse(res.isEmpty());
+        assertTrue(res.stream().allMatch(r -> r.status().equals(TradeStatus.FINISHED)));
+        assertTrue(res.stream().allMatch(r -> r.finished() != null));
+    }
+    @Test void updateToFinished_whenNotFound(){
+        List<Long> ids = Arrays.asList(1L, 2L);
+        when(offerRepository.findAllById(anyList())).thenReturn(Collections.emptyList());
+        List<OfferDto> res = offerProcessor.updateOffersToFinished(ids);
+        assertNotNull(res);
+        assertTrue(res.isEmpty());
+    }
+
+    //TODO: ON DEMO DAY
+    @Test void findByBuyer_whenIsOk(){}
+    @Test void findByBuyer_whenIsEmpty(){}
 
     private OfferDto inputOfferWithUserError() {
         return new OfferDto(
@@ -173,7 +248,6 @@ class OfferProcessorTest {
         return Collections.singletonList(new Publication(1L, user(1L), null));
     }
 
-    @Test void createNewOffer_whenIsNotOk(){}
 
     private static Offer offer() {
         return offer(1L);
@@ -188,7 +262,7 @@ class OfferProcessorTest {
         o.setBuyer(buyer());
         o.setFinishedAt(null);
         o.setPublisher(publisher());
-        o.setPublications(new ArrayList<>());
+        o.setPublications(new HashSet<>());
         o.setStatus(TradeStatus.STARTED);
         o.setCreatedAt(new Date(new java.util.Date().getTime()));
         return o;
@@ -207,5 +281,20 @@ class OfferProcessorTest {
         u.setUserId(l);
         u.setName("7S3R");
         return u;
+    }
+    private OfferDto inputOfferWithEmptyList() {
+        return new OfferDto(
+                1L,
+                2L,
+                Collections.EMPTY_LIST
+        );
+    }
+
+    private OfferDto inputOfferWithUpdate() {
+        return new OfferDto(
+                1L,
+                2L,
+                Arrays.asList(1L, 2L)
+        );
     }
 }

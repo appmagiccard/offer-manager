@@ -37,12 +37,9 @@ public class OfferController {
         return ResponseEntity.ok(offerProcessor.findOffersByPublisher(publisherId));
     }
 
-    @GetMapping("/{offerId}/publisher/{publisherId}")
-    public ResponseEntity<OfferDto> getOfferByOfferIdAndPublisherId(@PathVariable Long offerId, @PathVariable Long publisherId){
-        return offerProcessor.findOfferByIdAndByPublisher(offerId, publisherId)
-                .map(ResponseEntity::ok) //PRESENT
-                .orElseGet(this::notFoundResponse) // EMPTY
-                ;
+    @GetMapping("/buyer/{buyerId}")
+    public ResponseEntity<List<OfferDto>> getAllOffersByBuyerId(@PathVariable Long buyerId){
+        return ResponseEntity.ok(offerProcessor.findOffersByBuyer(buyerId));
     }
 
     @GetMapping("/publisher/{publisherId}/buyer/{buyerId}")
@@ -82,7 +79,7 @@ public class OfferController {
 
 
     @PutMapping("/{offerId}")
-    public ResponseEntity<OfferDto> updateOfferById(@PathVariable Long offerId,@RequestBody OfferDto inputOffer){
+    public ResponseEntity<OfferDto> updateOfferById(@PathVariable Long offerId,@RequestBody OfferDto inputOffer) throws UserNotFoundException {
         return offerProcessor.updateOffer(offerId, inputOffer)
                 .map(ResponseEntity::ok)
                 .orElseGet(this::notFoundResponse)

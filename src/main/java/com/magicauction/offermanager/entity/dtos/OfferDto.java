@@ -1,6 +1,5 @@
 package com.magicauction.offermanager.entity.dtos;
 
-import com.magicauction.offermanager.entity.Publication;
 import com.magicauction.offermanager.entity.TradeStatus;
 
 import java.util.Date;

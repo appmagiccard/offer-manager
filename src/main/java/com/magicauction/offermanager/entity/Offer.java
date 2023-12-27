@@ -1,19 +1,19 @@
 package com.magicauction.offermanager.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import java.sql.Date;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name="OFFERS")
@@ -34,14 +34,22 @@ public class Offer {
     private Date finishedAt;
     private TradeStatus status;
 
-    @ManyToMany(mappedBy = "offers")
-    private List<Publication> publications;
+    @ManyToMany(cascade = {
+            CascadeType.PERSIST,
+            CascadeType.MERGE
+    })
+    @JoinTable(
+            name = "publication_offer",
+            joinColumns = @JoinColumn(name = "offer_id"),
+            inverseJoinColumns = @JoinColumn(name = "publication_id"))
+    private Set<Publication> publications;
+
 
 
     public Offer() {
     }
 
-    public Offer(User publisher, User buyer, List<Publication> publications) {
+    public Offer(User publisher, User buyer, Set<Publication> publications) {
         this.publisher = publisher;
         this.buyer = buyer;
         this.publications = publications;
@@ -123,15 +131,15 @@ public class Offer {
         this.status = status;
     }
 
-    public List<Publication> getPublications() {
+    public Set<Publication> getPublications() {
         return publications;
     }
 
-    public void setPublications(List<Publication> publications) {
-        this.publications = publications;
+    public void setPublications(Set<Publication> pubOffers) {
+        this.publications = pubOffers;
     }
 
-    public Offer(Long offerId, User publisher, User buyer, Date createdAt, Date finishedAt, TradeStatus status, List<Publication> publications) {
+    public Offer(Long offerId, User publisher, User buyer, Date createdAt, Date finishedAt, TradeStatus status, Set<Publication> publications) {
         this.offerId = offerId;
         this.publisher = publisher;
         this.buyer = buyer;

@@ -144,10 +144,20 @@ public class OfferProcessor implements IOfferProcessor{
     }
 
     private Offer toEntity(OfferDto inputOffer) throws UserNotFoundException {
-        User buyer = userRepository.findById(inputOffer.buyerId()).orElseThrow(UserNotFoundException::new);
-        User publisher = userRepository.findById(inputOffer.publisherId()).orElseThrow(UserNotFoundException::new);
-        List<Publication> pubs = publicationRepository.findAllById(inputOffer.publications());
+        User buyer = findUserById(inputOffer.buyerId());
+        User publisher = findUserById(inputOffer.publisherId());
+        List<Publication> pubs = findPublicationsByIds((inputOffer.publications()));
         return new Offer(publisher, buyer, new HashSet<>(pubs));
+    }
+
+    private List<Publication> findPublicationsByIds(List<Long> publications) {
+        //Puede cambiar a una llamada REST cuando exista el servicio
+        return publicationRepository.findAllById(publications);
+    }
+
+    private User findUserById(Long id) throws UserNotFoundException {
+        //Puede cambiar a una llamada REST cuando exista el servicio
+        return userRepository.findById(id).orElseThrow(UserNotFoundException::new);
     }
 
     private boolean isPublicationsEmpty(OfferDto inputOffer) {

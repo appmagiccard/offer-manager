@@ -2,6 +2,7 @@ package com.magicauction.offermanager.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,6 +33,8 @@ public class Offer {
 
     private Date createdAt;
     private Date finishedAt;
+
+    @Enumerated
     private TradeStatus status;
 
     @ManyToMany(cascade = {

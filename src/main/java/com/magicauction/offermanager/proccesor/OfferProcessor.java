@@ -38,12 +38,12 @@ public class OfferProcessor implements IOfferProcessor{
 
     @Override
     public Optional<OfferDto> findOfferById(Long offerId) {
-        return repository.findById(offerId).map(this::fromEntity);
+        return repository.findById(offerId).map(this::toDto);
     }
 
     @Override
     public List<OfferDto> findAllOffers() {
-        return repository.findAll().stream().map(this::fromEntity).collect(Collectors.toList());
+        return repository.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Override
@@ -52,7 +52,7 @@ public class OfferProcessor implements IOfferProcessor{
             log.info("inputOffer not valid: {}", inputOffer);
             return Optional.empty();
         }
-        return Optional.of(fromEntity(repository.save(toEntity(inputOffer))));
+        return Optional.of(toDto(repository.save(toEntity(inputOffer))));
     }
 
     @Override
@@ -71,7 +71,7 @@ public class OfferProcessor implements IOfferProcessor{
         offer.setPublications(new HashSet<>(pubs));
         offer.setStatus(inputOffer.status() != null ? inputOffer.status() : TradeStatus.IN_PROGRESS);
         repository.save(offer);
-        return Optional.of(fromEntity(offer));
+        return Optional.of(toDto(offer));
     }
 
     @Override
@@ -88,22 +88,25 @@ public class OfferProcessor implements IOfferProcessor{
     public List<OfferDto> findOffersByPublisher(Long publisherId) {
         return repository.findOfferByPublisher(publisherId)
                 .stream()
-                .map(this::fromEntity)
+                .map(this::toDto)
                 .collect(Collectors.toList())
                 ;
     }
 
     @Override
     public List<OfferDto> findOffersByBuyer(Long buyerId) {
-        //TODO: ON DEMO DAY
-        return null;
+        return repository.findOfferByBuyer(buyerId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList())
+                ;
     }
 
     @Override
     public List<OfferDto> findOfferByPublisherIdAndByBuyerId(Long publisherId, Long buyerId) {
         return repository.findOfferByPublisherAndBuyer(publisherId, buyerId)
                 .stream()
-                .map(this::fromEntity)
+                .map(this::toDto)
                 .collect(Collectors.toList())
                 ;
     }
@@ -114,7 +117,7 @@ public class OfferProcessor implements IOfferProcessor{
                 .stream()
                 .map(this::updateToFinish)
                 .map(repository::save)
-                .map(this::fromEntity)
+                .map(this::toDto)
                 .collect(Collectors.toList())
                 ;
     }
@@ -125,7 +128,7 @@ public class OfferProcessor implements IOfferProcessor{
         return o;
     }
 
-    public OfferDto fromEntity(Offer entity){
+    public OfferDto toDto(Offer entity){
         List<Long> pubIds = entity.getPublications().stream()
                 .map(Publication::getPublicationId)
                 .collect(Collectors.toList());

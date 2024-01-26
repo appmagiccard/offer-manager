@@ -210,6 +210,10 @@ class OfferProcessorTest {
     @Test void updateToFinished_whenIsOk(){
         List<Long> ids = Arrays.asList(1L, 2L);
         when(offerRepository.findAllById(anyList())).thenReturn(Arrays.asList(offer(1L), offer(2L)));
+        Offer offer = offer(1L);
+        offer.setStatus(TradeStatus.FINISHED);
+        offer.setFinishedAt(new Date(1000L));
+        when(offerRepository.save(any())).thenReturn(offer);
         List<OfferDto> res = offerProcessor.updateOffersToFinished(ids);
         assertNotNull(res);
         assertFalse(res.isEmpty());
@@ -224,9 +228,20 @@ class OfferProcessorTest {
         assertTrue(res.isEmpty());
     }
 
-    //TODO: ON DEMO DAY
-    @Test void findByBuyer_whenIsOk(){}
-    @Test void findByBuyer_whenIsEmpty(){}
+    @Test void findByBuyer_whenIsOk(){
+        Long buyerId = 1L;
+        when(offerRepository.findOfferByBuyer(buyerId)).thenReturn(Arrays.asList(offer(1L), offer(2L)));
+        List<OfferDto> actual = offerProcessor.findOffersByBuyer(buyerId);
+        assertNotNull(actual);
+        assertFalse(actual.isEmpty());
+    }
+    @Test void findByBuyer_whenIsEmpty(){
+        Long buyerId = 1L;
+        when(offerRepository.findOfferByBuyer(buyerId)).thenReturn(Collections.emptyList());
+        List<OfferDto> actual = offerProcessor.findOffersByBuyer(buyerId);
+        assertNotNull(actual);
+        assertTrue(actual.isEmpty());
+    }
 
     private OfferDto inputOfferWithUserError() {
         return new OfferDto(

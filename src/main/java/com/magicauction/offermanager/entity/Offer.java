@@ -17,18 +17,19 @@ import java.util.Objects;
 import java.util.Set;
 
 @Entity
-@Table(name="OFFERS")
+@Table(name = "OFFERS")
 public class Offer {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long offerId;
 
     @ManyToOne
-    @JoinColumn(name="publisher", referencedColumnName = "userId")
+    @JoinColumn(name = "publisher", referencedColumnName = "userId")
     private User publisher;
 
     @ManyToOne
-    @JoinColumn(name="buyer", referencedColumnName = "userId")
+    @JoinColumn(name = "buyer", referencedColumnName = "userId")
     private User buyer;
 
     private Date createdAt;
@@ -47,6 +48,7 @@ public class Offer {
             inverseJoinColumns = @JoinColumn(name = "publication_id"))
     private Set<Publication> publications;
 
+    private String priceOffered;
 
 
     public Offer() {
@@ -58,6 +60,15 @@ public class Offer {
         this.publications = publications;
         this.status = TradeStatus.STARTED;
         this.createdAt = new Date(new java.util.Date().getTime());
+    }
+
+    public Offer(User publisher, User buyer, Set<Publication> publications, String priceOffered) {
+        this.publisher = publisher;
+        this.buyer = buyer;
+        this.publications = publications;
+        this.status = TradeStatus.STARTED;
+        this.createdAt = new Date(new java.util.Date().getTime());
+        this.priceOffered = priceOffered;
     }
 
     @Override
@@ -142,7 +153,15 @@ public class Offer {
         this.publications = pubOffers;
     }
 
-    public Offer(Long offerId, User publisher, User buyer, Date createdAt, Date finishedAt, TradeStatus status, Set<Publication> publications) {
+    public String getPriceOffered() {
+        return priceOffered;
+    }
+
+    public void setPriceOffered(String priceOffered) {
+        this.priceOffered = priceOffered;
+    }
+
+    public Offer(Long offerId, User publisher, User buyer, Date createdAt, Date finishedAt, TradeStatus status, Set<Publication> publications, String priceOffered) {
         this.offerId = offerId;
         this.publisher = publisher;
         this.buyer = buyer;
@@ -150,5 +169,6 @@ public class Offer {
         this.finishedAt = finishedAt;
         this.status = status;
         this.publications = publications;
+        this.priceOffered = priceOffered;
     }
 }

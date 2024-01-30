@@ -25,7 +25,7 @@ public class Publication {
     @JoinColumn(name="publisher_id", referencedColumnName = "userId")
     private User publisher;
 
-    @ManyToMany
+    @ManyToMany(mappedBy = "publications")
     private Set<Offer> offers;
 
     private String cardName;
